@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Flux Image Uploader</title>
+    <script src="https://npmcdn.com/flux-sdk-browser@0.3.1/dist/flux-sdk-min.js"></script>
+    <script src="./lib/flux-data-selector.js"></script>
+    <script src="./src/app.js"></script>
+</head>
+    <body onload="handleLoad()">
+    <h2>Flux Image Uploader</h2>
+    <div id="contentDiv" hidden>
+        <button type="button" id="loginButton">Login</button><br>
+        <select id="projectMenu"></select>
+        <button type="button" id="projectButton">Select this project</button><br>
+        <select id="keysMenu"></select>
+        <button type="button" id="keyButton">View this key</button><br>
+        Upload image: <input type="file" id="imageSelector" accept="image/*" multiple disabled><br>
+        <br>
+        <canvas id="imageCanvas" height="200" width="200"></canvas>
+    </div>
+    <script>
+    'use strict';
+
+    function makeApp(isProd) {
+        var FLUX_CLIENT_ID = '780e094b-ce3b-4f7a-b807-00c61d30633f';//local
+        if (isProd) {
+            FLUX_CLIENT_ID = '92a4c7db-d562-4421-954b-effb2cfe1fd7'; // Prod
+        }
+        var projectMenu = document.querySelector('#projectMenu');
+
+        var REDIRECT_URI = window.location.origin;
+        while(projectMenu.children.length > 0) {
+            projectMenu.removeChild(projectMenu.children[0]);
+        }
+        var fluxApp = new FluxApp(FLUX_CLIENT_ID, REDIRECT_URI, projectMenu, isProd);
+        return fluxApp;
+    }
+
+    function handleLoad() {
+        var fluxApp = makeApp(true); // true means connect to prod not dev
+        document.querySelector('#contentDiv').removeAttribute('hidden');
+
+        document.querySelector('#loginButton').addEventListener('click', function(){
+            fluxApp.login();
+        });
+
+        document.querySelector('#projectButton').addEventListener('click', function(){
+            fluxApp.selectProject();
+            document.querySelector('#imageSelector').removeAttribute('disabled');
+        });
+
+        document.querySelector('#keyButton').addEventListener('click', function(){
+            fluxApp.selectKey();
+        });
+
+        document.querySelector('#imageSelector').addEventListener('change', function(){
+            fluxApp.fileChanged(imageSelector);
+        });
+
+    }
+    </script>
+</body>
+</html>
