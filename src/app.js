@@ -15,6 +15,7 @@ function FluxApp (clientKey, redirectUri, projectMenu, isProd){
     this.canvas = document.querySelector('#imageCanvas');
     this.ctx = this.canvas.getContext('2d');
 }
+FluxApp.keyDescription = 'Image blob';
 
 FluxApp.prototype.login = function () {
     this._fluxDataSelector.login();
@@ -39,7 +40,7 @@ FluxApp.prototype.selectKey = function () {
 }
 
 FluxApp.prototype.createKey = function (name, data) {
-    this._dt.createCell(name, {value:data, description:'Image blob'}).then(function (cell) {
+    this._dt.createCell(name, {value:data, description:FluxApp.keyDescription}).then(function (cell) {
         console.log(cell);
     });
 }
@@ -62,7 +63,7 @@ FluxApp.prototype.populateKeys = function (keysPromise) {
     keysPromise.then(function (keys) {
         for (var i=0;i<keys.entities.length;i++) {
             var entity = keys.entities[i];
-            if (entity.description.indexOf('Image file') === -1) continue;
+            if (entity.description.indexOf(FluxApp.keyDescription) === -1) continue;
             var option = document.createElement('option');
             _this._keysMenu.appendChild(option);
             option.value = entity.id;
