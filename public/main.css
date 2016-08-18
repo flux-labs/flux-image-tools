@@ -1,4 +1,20 @@
 #imageCanvas {
-	max-width: 500px;
-	max-height: 500px;
+	width: 512px;
+	height: 512px;
+	background-color: #eeeeee;
+	float: left;
+}
+
+#filters {
+	background-color: #eeeeee;
+	border: 1px solid black;
+	display: inline-block;
+	height: 512px;
+	width: 512px;
+	margin-left: 1.0em;
+}
+
+#tail {
+	/*display: inline-block;*/
+	float: center;
 }

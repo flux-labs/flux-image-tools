@@ -12,8 +12,7 @@ function FluxApp (clientKey, redirectUri, projectMenu, isProd){
     this._fluxDataSelector.setOnKeys(this.populateKeys.bind(this));
     this._fluxDataSelector.setOnValue(this.populateValue.bind(this));
     this._fluxDataSelector.init();
-    this.canvas = document.querySelector('#imageCanvas');
-    this.ctx = this.canvas.getContext('2d');
+    this.tools = new ImageTools(document.querySelector('#imageCanvas'), 512, 512);
 }
 FluxApp.keyDescription = 'Image blob';
 
@@ -63,7 +62,6 @@ FluxApp.prototype.populateKeys = function (keysPromise) {
     keysPromise.then(function (keys) {
         for (var i=0;i<keys.entities.length;i++) {
             var entity = keys.entities[i];
-            if (entity.description.indexOf(FluxApp.keyDescription) === -1) continue;
             var option = document.createElement('option');
             _this._keysMenu.appendChild(option);
             option.value = entity.id;
@@ -76,10 +74,15 @@ FluxApp.prototype.populateValue = function (valuePromise) {
     var _this = this;
     valuePromise.then(function (entity) {
         var dataUrl = entity.value;
+        if (typeof dataUrl !== 'string' || dataUrl.indexOf('image') === -1) {
+            console.log('Not an image');
+            return;
+        }
         fetch(dataUrl).then(function(response) {
             return response.blob();
         }).then(function(blob) {
-            _this.renderImageBlob(blob);
+            _this.tools.renderImageBlob(blob);
+            _this.fileName = entity.label;
         });
     });
 }
@@ -105,26 +108,11 @@ FluxApp.prototype.fileChanged = function (selector) {
     }
 };
 
-FluxApp.prototype.renderImageBlob = function (blob) {
-    var _this = this;
-    createImageBitmap(blob).then(function (imageBitmap) {
-        _this.canvas.width = imageBitmap.width;
-        _this.canvas.height = imageBitmap.height;
-        _this.ctx.drawImage(imageBitmap, 0, 0);
-    });
-};
-
-
 FluxApp.prototype._readImageFile = function (imageFile) {
     var _this = this
-    this.renderImageBlob(imageFile);
-    var fileNameBase = FluxApp.stripExtension(imageFile.name);
-    var reader = new FileReader();
-    reader.onloadend = function (event) {
-        var imgDataUrl = event.target.result;
-        _this.createKey(fileNameBase, imgDataUrl);
-    }
-    reader.readAsDataURL(imageFile);
+    this.tools.renderImageBlob(imageFile);
+    this.fileName = FluxApp.stripExtension(imageFile.name);
+
 };
 
 FluxApp.stripExtension = function (fileName) {
@@ -132,3 +120,37 @@ FluxApp.stripExtension = function (fileName) {
     if (i===-1) return fileName;
     return fileName.substring(0,i);
 }
+
+FluxApp.prototype.downloadImage = function () {
+    var dataUrl = this.tools.getDataUrl();
+    if (dataUrl.length > 1000000) {
+        console.warn('this is a large image ('+dataUrl.length+' encoded characters) and the download may fail');
+    }
+    var a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = FluxApp.addExtension(this.fileName);
+    a.click();
+}
+FluxApp.addExtension = function (fileName) {
+    if (fileName.indexOf('.')===-1) {
+        fileName += '.png';
+    }
+    return fileName;
+};
+
+FluxApp.prototype.uploadImage = function () {
+    var fileNameBase = FluxApp.stripExtension(this.fileName);
+    var dataUrl = this.tools.getDataUrl();
+    this.createKey(fileNameBase, dataUrl);
+}
+
+FluxApp.prototype.doSomething = function () {
+    this.tools.doSomething();
+};
+
+FluxApp.prototype.addFilter = function (container) {
+    if (!container) return;
+    var div = document.createElement('div');
+    container.appendChild(div);
+    div.textContent = 'I am a filter';
+};
