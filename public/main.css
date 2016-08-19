@@ -18,3 +18,7 @@
 	/*display: inline-block;*/
 	float: center;
 }
+
+.filter {
+	border: 1px dotted black;
+}

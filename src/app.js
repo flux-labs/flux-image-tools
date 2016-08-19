@@ -12,10 +12,21 @@ function FluxApp (clientKey, redirectUri, projectMenu, isProd){
     this._fluxDataSelector.setOnKeys(this.populateKeys.bind(this));
     this._fluxDataSelector.setOnValue(this.populateValue.bind(this));
     this._fluxDataSelector.init();
-    this.tools = new ImageTools(document.querySelector('#imageCanvas'), 512, 512);
+    var filters = document.querySelector('#filters');
+    this.tools = new ImageTools(document.querySelector('#imageCanvas'), 512, 512, filters);
+    this.loadDefault();
 }
+
 FluxApp.keyDescription = 'Image blob';
 
+FluxApp.prototype.loadDefault = function () {
+    var _this = this;
+    fetch('data/city.jpg').then(function(response) {
+        return response.blob();
+    }).then(function(blob) {
+        _this.tools.renderImageBlob(blob);
+    });
+}
 FluxApp.prototype.login = function () {
     this._fluxDataSelector.login();
 }
@@ -144,13 +155,16 @@ FluxApp.prototype.uploadImage = function () {
     this.createKey(fileNameBase, dataUrl);
 }
 
-FluxApp.prototype.doSomething = function () {
-    this.tools.doSomething();
+FluxApp.prototype.applyFilters = function () {
+    this.tools.applyFilters();
 };
 
 FluxApp.prototype.addFilter = function (container) {
-    if (!container) return;
-    var div = document.createElement('div');
-    container.appendChild(div);
-    div.textContent = 'I am a filter';
+    this.tools.addFilter();
+    this.tools.applyFilters();
+};
+
+FluxApp.prototype.deleteFilter = function (container) {
+    this.tools.deleteFilter();
+    this.tools.applyFilters();
 };

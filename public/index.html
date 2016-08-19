@@ -7,6 +7,8 @@
     <script src="./lib/flux-data-selector.js"></script>
     <script src="./src/app.js"></script>
     <script src="./src/ImageTools.js"></script>
+    <script src="./lib/MersenneTwister.js"></script>
+    <script src="./src/Filters.js"></script>
 </head>
     <body onload="handleLoad()">
     <h2>Flux Image Tools</h2>
@@ -23,7 +25,7 @@
         <div id="filters">
             <button id="addButton">Add filter</button>
             <button id="deleteButton">Delete filter</button>
-            <button id="doButton" disabled>Do something</button>
+            <button id="filterButton">Apply Filters</button>
         </div>
         <br>
         <div id="tail">
@@ -67,13 +69,11 @@
         document.querySelector('#keyButton').addEventListener('click', function(){
             fluxApp.selectKey();
             document.querySelector('#downloadButton').removeAttribute('disabled');
-            document.querySelector('#doButton').removeAttribute('disabled');
         });
 
         document.querySelector('#imageSelector').addEventListener('change', function(){
             fluxApp.fileChanged(imageSelector);
             document.querySelector('#downloadButton').removeAttribute('disabled');
-            document.querySelector('#doButton').removeAttribute('disabled');
         });
 
         document.querySelector('#downloadButton').addEventListener('click', function(){
@@ -84,14 +84,17 @@
             fluxApp.uploadImage();
         });
 
-        document.querySelector('#doButton').addEventListener('click', function(){
-            fluxApp.doSomething();
+        document.querySelector('#filterButton').addEventListener('click', function(){
+            fluxApp.applyFilters();
         });
 
         document.querySelector('#addButton').addEventListener('click', function(){
-            fluxApp.addFilter(document.querySelector('#filters'));
+            fluxApp.addFilter();
         });
 
+        document.querySelector('#deleteButton').addEventListener('click', function(){
+            fluxApp.deleteFilter();
+        });
 
     }
     </script>
