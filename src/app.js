@@ -12,13 +12,27 @@ function FluxApp (clientKey, redirectUri, projectMenu, isProd){
     this._fluxDataSelector.setOnKeys(this.populateKeys.bind(this));
     this._fluxDataSelector.setOnValue(this.populateValue.bind(this));
     this._fluxDataSelector.init();
+    this.keyIsImage = true;
     var filters = document.querySelector('#filters');
-    this.tools = new ImageTools(document.querySelector('#imageCanvas'), 512, 512, filters);
+    var imageCanvas = document.querySelector('#imageCanvas');
+    this.addListener(imageCanvas);
+    this.tools = new ImageTools(imageCanvas, 512, 512, filters);
     this.addPresets();
     this.loadDefault();
+    this._vpDiv = document.querySelector('#viewport');
+    this.hideViewport();
 }
 
 FluxApp.keyDescription = 'Image blob';
+
+FluxApp.prototype.addListener = function (imageCanvas) {
+    var _this = this;
+    imageCanvas.addEventListener('mouseover', function (e) {
+        if (!_this.keyIsImage) {
+            _this.showViewport();
+        }
+    });
+};
 
 FluxApp.prototype.addPresets = function () {
     var menu = document.querySelector('#presetsMenu');
@@ -56,6 +70,21 @@ FluxApp.prototype.onLogin = function () {
 FluxApp.prototype.selectProject = function () {
     this._fluxDataSelector.selectProject(this._projectMenu.value);
     this._dt = this._fluxDataSelector.getDataTable(this._projectMenu.value).table;
+    this.vp = new FluxViewport(this._vpDiv,{
+        projectId: this._projectMenu.value,
+        token: this.getFluxToken()
+    });
+    this.vp.setupDefaultLighting();
+    this.vp.homeCamera();
+    this.vp.render();
+}
+
+FluxApp.prototype.hideViewport = function () {
+    this._vpDiv.classList.add('hidden');
+}
+
+FluxApp.prototype.showViewport = function () {
+    this._vpDiv.classList.remove('hidden');
 }
 
 FluxApp.prototype.selectKey = function () {
@@ -101,7 +130,13 @@ FluxApp.prototype.populateValue = function (valuePromise) {
         var dataUrl = entity.value;
         if (typeof dataUrl !== 'string' || dataUrl.indexOf('image') === -1) {
             console.log('Not an image');
+            _this.vp.setGeometryEntity(entity.value);
+            _this.keyIsImage = false;
+            _this.showViewport();
             return;
+        } else {
+            _this.keyIsImage = true;
+            _this.hideViewport();
         }
         fetch(dataUrl).then(function(response) {
             return response.blob();
@@ -169,8 +204,33 @@ FluxApp.prototype.uploadImage = function () {
     this.createKey(fileNameBase, dataUrl);
 }
 
+FluxApp.prototype.isViewportHidden = function () {
+    var cl = this._vpDiv.classList;
+    for (var i=0;i<cl.length;i++) {
+        if (cl[i] === 'hidden') {
+            return true;
+        }
+    }
+    return false;
+};
+
 FluxApp.prototype.applyFilters = function () {
-    this.tools.applyFilters();
+    var _this = this;
+    // check if viewport is on
+    if (this.vp && !this.isViewportHidden()) {
+        fetch(this.vp.getGlCanvas().toDataURL()).then(function(response) {
+            return response.blob();
+        }).then(function(blob) {
+            _this.tools.renderImageBlob(blob);
+            _this.fileName = 'interactive';
+            _this.hideViewport();
+            setTimeout(function () {
+                _this.tools.applyFilters();
+            },100);
+        });
+    } else {
+        this.tools.applyFilters();
+    }
 };
 
 FluxApp.prototype.addFilter = function (container) {

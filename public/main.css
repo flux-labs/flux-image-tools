@@ -5,6 +5,19 @@
 	float: left;
 }
 
+#viewport {
+	position: absolute;
+	width: 512px;
+	height: 512px;
+	background-color: #eeeeee;
+	float: left;
+}
+
+.hidden {
+	visibility: hidden;
+	/*opacity: 0.01;*/
+}
+
 #filters {
 	background-color: #eeeeee;
 	border: 1px solid black;
