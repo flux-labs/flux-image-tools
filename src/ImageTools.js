@@ -40,12 +40,12 @@ ImageTools.prototype.getDataUrl = function () {
 ImageTools.prototype.renderImageBlob = function (blob) {
     var _this = this;
     this.ctx.clearRect(0,0,this.canvas.width, this.canvas.height);
-    createImageBitmap(blob).then(function (imageBitmap) {
+    return createImageBitmap(blob).then(function (imageBitmap) {
         var aspect = imageBitmap.width / imageBitmap.height;
         if (aspect < 1) {
-            _this.ctx.drawImage(imageBitmap, _this.width*aspect/4, 0, _this.width*aspect, _this.height);
+            _this.ctx.drawImage(imageBitmap, _this.width*(1-aspect)/2, 0, _this.width*aspect, _this.height);
         } else if (aspect > 1) {
-            _this.ctx.drawImage(imageBitmap, 0, _this.height/(aspect*4), _this.width, _this.height/aspect);
+            _this.ctx.drawImage(imageBitmap, 0, _this.height*(1-(1/aspect))/2, _this.width, _this.height/aspect);
         } else {
             _this.ctx.drawImage(imageBitmap, 0, 0, _this.width, _this.height);
         }

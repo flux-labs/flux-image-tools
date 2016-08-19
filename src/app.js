@@ -18,7 +18,7 @@ function FluxApp (clientKey, redirectUri, projectMenu, isProd){
     this.addListener(imageCanvas);
     this.tools = new ImageTools(imageCanvas, 512, 512, filters);
     this.addPresets();
-    this.loadDefault();
+    this.loadDefault('city.jpg');
     this._vpDiv = document.querySelector('#viewport');
     this.hideViewport();
 }
@@ -27,7 +27,7 @@ FluxApp.keyDescription = 'Image blob';
 
 FluxApp.prototype.addListener = function (imageCanvas) {
     var _this = this;
-    imageCanvas.addEventListener('mouseover', function (e) {
+    imageCanvas.addEventListener('mousedown', function (e) {
         if (!_this.keyIsImage) {
             _this.showViewport();
         }
@@ -46,13 +46,15 @@ FluxApp.prototype.addPresets = function () {
     }
 };
 
-FluxApp.prototype.loadDefault = function () {
+FluxApp.prototype.loadDefault = function (name) {
     var _this = this;
     this.fileName = 'city';
-    fetch('data/city.jpg').then(function(response) {
+    fetch('data/'+name).then(function(response) {
         return response.blob();
     }).then(function(blob) {
-        _this.tools.renderImageBlob(blob);
+        _this.tools.renderImageBlob(blob).then(function () {
+            _this.applyFilters();
+        });
     });
 }
 FluxApp.prototype.login = function () {
@@ -170,7 +172,9 @@ FluxApp.prototype.fileChanged = function (selector) {
 
 FluxApp.prototype._readImageFile = function (imageFile) {
     var _this = this
-    this.tools.renderImageBlob(imageFile);
+    this.tools.renderImageBlob(imageFile).then(function () {
+        _this.applyFilters();
+    });
     this.fileName = FluxApp.stripExtension(imageFile.name);
 
 };

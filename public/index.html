@@ -20,7 +20,8 @@
         <button type="button" id="projectButton">Select this project</button><br>
         <select id="keysMenu" disabled></select>
         <button type="button" id="keyButton" disabled>View this key</button> or
-        <input type="file" id="imageSelector" accept="image/*"><br>
+        <input type="file" id="imageSelector" accept="image/*">
+        or use <select id="imagePresets"></select>
         <br>
         <canvas id="imageCanvas" height="200" width="200"></canvas>
         <div id="viewport"></div>
@@ -107,6 +108,26 @@
             fluxApp.deleteFilter();
         });
 
+        var presetImages = ['city.jpg', 'berkeley.jpg', 'halloween.jpg', 'sandiego.jpg', 'vegas.jpg'];
+
+        for (var i=0;i<presetImages.length;i++) {
+            var name = presetImages[i];
+            var option = document.createElement('option');
+            imagePresets.appendChild(option);
+            option.value = name;
+            option.textContent = name.substring(0,name.indexOf('.'));
+        }
+
+        document.querySelector('#imagePresets').addEventListener('change', function(){
+            fluxApp.loadDefault(imagePresets.value);
+        });
+
+        window.addEventListener('keypress', function (e) {
+            // Focus the viewport camera on the current geometry when the 'f' key is pressed
+            if (e.key==='f') {
+                fluxApp.vp.focus();
+            }
+        });
     }
     </script>
 </body>
