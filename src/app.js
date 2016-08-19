@@ -191,3 +191,8 @@ FluxApp.prototype.presetChanged = function (value) {
     }
     this.tools.applyFilters();
 };
+
+FluxApp.prototype.toggleAll = function (value) {
+    this.tools.toggleAll(value);
+    this.tools.applyFilters();
+}

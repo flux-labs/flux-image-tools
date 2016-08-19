@@ -30,6 +30,8 @@
             <select id="presetsMenu">
                 <option value="default">default</option>
             </select>
+            <input id="disableAll" type="checkbox">Disable Filters
+            <br>
         </div>
         <br>
         <div id="tail">
@@ -80,6 +82,10 @@
 
         document.querySelector('#presetsMenu').addEventListener('change', function(){
             fluxApp.presetChanged(presetsMenu.value);
+        });
+
+        document.querySelector('#disableAll').addEventListener('change', function(){
+            fluxApp.toggleAll(disableAll.checked);
         });
 
         document.querySelector('#downloadButton').addEventListener('click', function(){

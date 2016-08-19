@@ -21,12 +21,12 @@ Filters.createImageData = function(w,h) {
   return this.tmpCtx.createImageData(w,h);
 };
 
-Filters.sharpen = function(pixels, param1) {
-    return Filters.filterImage(Filters.convolute, pixels, Filters.kernels.sharpen, param1);
+Filters.sharpen = function(pixels, param1, mask, invert) {
+    return Filters.convolute(pixels, Filters.kernels.sharpen, param1, mask, invert);
 };
 
-Filters.blur = function(pixels, param1) {
-    return Filters.filterImage(Filters.convolute, pixels, Filters.kernels.blur, param1);
+Filters.blur = function(pixels, param1, mask, invert) {
+    return Filters.convolute(pixels, Filters.kernels.blur, param1, mask, invert);
 };
 
 Filters.copyBuffer = function(pixels1, pixels2, width, height) {
@@ -36,14 +36,11 @@ Filters.copyBuffer = function(pixels1, pixels2, width, height) {
   }
 }
 
-Filters.filterImage = function(filter, pixels, var_args) {
-  var args = [pixels];
-  for (var i=2; i<arguments.length; i++) {
-    args.push(arguments[i]);
-  }
-  return filter.apply(null, args);
-};
-
+Filters.clonePixels = function (pixels) {
+  var pixels2 = Filters.createImageData(pixels.width, pixels.height);
+  Filters.copyBuffer(pixels, pixels2, pixels.width, pixels.height);
+  return pixels2;
+}
 /**
  * Random number in [-1,1]
  */
@@ -62,9 +59,12 @@ Filters.lerp = function (t, a, b) {
   return a + t * (b-a);
 }
 
-Filters.noise = function(pixels, param1) {
+Filters.noise = function(pixels, param1, mask, invert) {
   var magnitude = Filters.remap(param1, 0, 100, 0, 50);
-  var d = pixels.data;
+  var md = Filters.grayscaleHelper(pixels).data;
+  var p = pixels.data;
+  var pixels2 = Filters.clonePixels(pixels);
+  var d = pixels2.data;
   for (var i=0; i<d.length; i+=4) {
     var r = d[i];
     var g = d[i+1];
@@ -73,10 +73,28 @@ Filters.noise = function(pixels, param1) {
     d[i+1] += Math.floor(Filters.rand11()*magnitude);
     d[i+2] += Math.floor(Filters.rand11()*magnitude);
   }
-  return pixels;
+  return Filters.maskResult(pixels, pixels2, md, mask, invert);
 };
 
-Filters.grayscale = function(pixels, param1) {
+Filters.grayscaleHelper = function(pixels, param1) {
+  var output = Filters.createImageData(pixels.width, pixels.height);
+  var t = Filters.remap(param1, 0, 100, 0, 1);
+  var p = pixels.data;
+  var d = output.data;
+  for (var i=0; i<d.length; i+=4) {
+    var r = p[i];
+    var g = p[i+1];
+    var b = p[i+2];
+    // CIE luminance for the RGB
+    // The human eye is bad at seeing red and blue, so we de-emphasize them.
+    var v = 0.2126*r + 0.7152*g + 0.0722*b;
+    d[i] = d[i+1] = d[i+2] = v;
+  }
+  return output;
+};
+
+Filters.grayscale = function(pixels, param1, mask, invert) {
+  var md = Filters.grayscaleHelper(pixels).data;
   var t = Filters.remap(param1, 0, 100, 0, 1);
   var d = pixels.data;
   for (var i=0; i<d.length; i+=4) {
@@ -86,23 +104,43 @@ Filters.grayscale = function(pixels, param1) {
     // CIE luminance for the RGB
     // The human eye is bad at seeing red and blue, so we de-emphasize them.
     var v = 0.2126*r + 0.7152*g + 0.0722*b;
-    d[i]   = Filters.lerp(t, r, v);
-    d[i+1] = Filters.lerp(t, g, v);
-    d[i+2] = Filters.lerp(t, b, v);
+    var brightness = md[i]/Filters.range;
+    brightness = invert ? brightness : 1-brightness;
+    var tm = Filters.lerp(brightness, t, mask);
+    d[i]   = Filters.lerp(tm, r, v);
+    d[i+1] = Filters.lerp(tm, g, v);
+    d[i+2] = Filters.lerp(tm, b, v);
   }
   return pixels;
 };
 
-Filters.brightness = function(pixels, param1) {
+Filters.brightness = function(pixels, param1, mask, invert) {
   var t = Filters.remap(param1, 0, 100, -50, 100);
-  var d = pixels.data;
+  var md = Filters.grayscaleHelper(pixels).data;
+  var p = pixels.data;
+  var pixels2 = Filters.clonePixels(pixels);
+  var d = pixels2.data;
   for (var i=0; i<d.length; i+=4) {
     d[i] += t;
     d[i+1] += t;
     d[i+2] += t;
   }
-  return pixels;
+  return Filters.maskResult(pixels, pixels2, md, mask, invert);
 };
+
+Filters.maskResult = function (pixels, pixels2, md, mask, invert) {
+  var p = pixels.data;
+  var d = pixels2.data;
+  for (var i=0; i<d.length; i+=4) {
+    var a = md[i]/Filters.range;
+    a = invert ? a : 1-a;
+    var tm = Filters.lerp(a, 1, mask);
+    d[i  ] = Filters.lerp(tm, p[i  ], d[i  ]);
+    d[i+1] = Filters.lerp(tm, p[i+1], d[i+1]);
+    d[i+2] = Filters.lerp(tm, p[i+2], d[i+2]);
+  }
+  return pixels2;
+}
 
 Filters.threshold = function(pixels, param1) {
   var t = Filters.remap(param1, 0, 100, 0, 255);
@@ -127,15 +165,15 @@ Filters.mAdobeInv = [2.0413690, -0.5649464, -0.3446944,
              0.0134474, -0.1183897,  1.0154096];
 
 Filters.mBeta = [
-0.6712537,  0.1745834,  0.1183829,
-0.3032726,  0.6637861,  0.0329413,
-0.0000000,  0.0407010,  0.7845090
+  0.6712537,  0.1745834,  0.1183829,
+  0.3032726,  0.6637861,  0.0329413,
+  0.0000000,  0.0407010,  0.7845090
 ];
 
 Filters.mBetaInv = [
- 1.6832270, -0.4282363, -0.2360185,
--0.7710229,  1.7065571,  0.0446900,
- 0.0400013, -0.0885376,  1.2723640
+   1.6832270, -0.4282363, -0.2360185,
+  -0.7710229,  1.7065571,  0.0446900,
+   0.0400013, -0.0885376,  1.2723640
 ];
 
 Filters.rgbToXyz = function(data) {
@@ -154,36 +192,48 @@ Filters.transform = function(data, m) {
 };
 
 
-Filters.red = function(pixels, param1) {
+Filters.red = function(pixels, param1, mask, invert) {
   var t = Filters.remap(param1, 0, 100, -30, 30);
-  var d = pixels.data;
+  var md = Filters.grayscaleHelper(pixels).data;
+  var p = pixels.data;
+  var pixels2 = Filters.clonePixels(pixels);
+  var d = pixels2.data;
   for (var i=0; i<d.length; i+=4) {
     d[i] += t;
   }
-  return pixels;
+  return Filters.maskResult(pixels, pixels2, md, mask, invert);
 };
 
-Filters.green = function(pixels, param1) {
+Filters.green = function(pixels, param1, mask, invert) {
   var t = Filters.remap(param1, 0, 100, -30, 30);
-  var d = pixels.data;
+  var md = Filters.grayscaleHelper(pixels).data;
+  var p = pixels.data;
+  var pixels2 = Filters.clonePixels(pixels);
+  var d = pixels2.data;
   for (var i=0; i<d.length; i+=4) {
     d[i+1] += t;
   }
-  return pixels;
+  return Filters.maskResult(pixels, pixels2, md, mask, invert);
 };
 
-Filters.blue = function(pixels, param1) {
+Filters.blue = function(pixels, param1, mask, invert) {
   var t = Filters.remap(param1, 0, 100, -30, 30);
-  var d = pixels.data;
+  var md = Filters.grayscaleHelper(pixels).data;
+  var p = pixels.data;
+  var pixels2 = Filters.clonePixels(pixels);
+  var d = pixels2.data;
   for (var i=0; i<d.length; i+=4) {
     d[i+2] += t;
   }
-  return pixels;
+  return Filters.maskResult(pixels, pixels2, md, mask, invert);
 };
 
-Filters.temperature = function(pixels, param1) {
+Filters.temperature = function(pixels, param1, mask, invert) {
   var t = Filters.remap(param1, 0, 100, -15, 15);
-  var d = pixels.data;
+  var md = Filters.grayscaleHelper(pixels).data;
+  var p = pixels.data;
+  var pixels2 = Filters.clonePixels(pixels);
+  var d = pixels2.data;
   for (var i=0; i<d.length; i+=4) {
     var r = d[i];
     var g = d[i+1];
@@ -197,14 +247,17 @@ Filters.temperature = function(pixels, param1) {
     d[i+1] = rgb[1];
     d[i+2] = rgb[2];
   }
-  return pixels;
+  return Filters.maskResult(pixels, pixels2, md, mask, invert);
 };
 
 Filters.range = 255;
 
-Filters.contrast = function(pixels, param1) {
+Filters.contrast = function(pixels, param1, mask, invert) {
   var t = Filters.remap(param1, 0, 100, 0, 2);
-  var d = pixels.data;
+  var md = Filters.grayscaleHelper(pixels).data;
+  var p = pixels.data;
+  var pixels2 = Filters.clonePixels(pixels);
+  var d = pixels2.data;
   for (var i=0; i<d.length; i+=4) {
     var r = d[i];
     var g = d[i+1];
@@ -216,11 +269,12 @@ Filters.contrast = function(pixels, param1) {
     d[i+1] = g;
     d[i+2] = b;
   }
-  return pixels;
+  return Filters.maskResult(pixels, pixels2, md, mask, invert);
 };
 
-Filters.convolute = function(pixels, weights, param1) {
+Filters.convolute = function(pixels, weights, param1, mask, invert) {
   var t = Filters.remap(param1, 0, 100, 0, 1);
+  var md = Filters.grayscaleHelper(pixels).data;
   var opaque = false;
   var side = Math.round(Math.sqrt(weights.length));
   var halfSide = Math.floor(side/2);
@@ -262,7 +316,7 @@ Filters.convolute = function(pixels, weights, param1) {
       dst[dstOff+3] = a + alphaFac*(255-a);
     }
   }
-  return output;
+  return Filters.maskResult(pixels, output, md, mask, invert);
 };
 
 Filters.convoluteFloat32 = function(pixels, weights, opaque) {
@@ -310,7 +364,7 @@ Filters.convoluteFloat32 = function(pixels, weights, opaque) {
 };
 
 Filters.sobel = function(pixels) {
-    var pixels = Filters.filterImage(Filters.grayscale, pixels, 100);
+    var pixels = Filters.grayscale(pixels, 100, 50);
     var vertical = Filters.convoluteFloat32(pixels, Filters.kernels.verticalGradient);
     var horizontal = Filters.convoluteFloat32(pixels, Filters.kernels.horizontalGradient);
     var id = Filters.createImageData(vertical.width, vertical.height);

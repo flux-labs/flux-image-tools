@@ -20,6 +20,8 @@ function ImageTools (canvas, width, height, filtersContainer){
 
     // Pixels of the loaded image, used to start compositing stream
     this.basePixels = null;
+
+    this.disabled = false;
 }
 
 
@@ -53,10 +55,7 @@ ImageTools.prototype.renderImageBlob = function (blob) {
 
 ImageTools.prototype.addFilter = function () {
     if (!this.filtersContainer) return;
-    this.filters.push({
-        name: ImageTools.operations[0],
-        param1: 50
-    });
+    this.filters.push(JSON.parse(JSON.stringify(ImageTools.defaultFilter)));
     this.renderHtml();
 };
 
@@ -99,21 +98,54 @@ ImageTools.prototype.addFilterHtml = function () {
     }
     var _this = this;
     select.addEventListener('change', function() {
-        _this.changeFilter(this.dataset.index, 'name', this.value);
+        _this.changeFilter(Number(this.dataset.index), 'name', this.value);
         _this.applyFilters();
     });
     div.appendChild(select);
 
-    // Range element
+    // Range element param1
     var range = document.createElement('input');
     range.dataset.index = this.getNumFilters();
     range.type='range';
+    range.classList.add('param1')
+    range.title = 'Intensity';
     range.addEventListener('change', function() {
         _this.changeFilter(this.dataset.index, 'param1', Number(this.value));
         _this.applyFilters();
     });
-
     div.appendChild(range);
+
+    var node = document.createTextNode('Mask: ');
+    div.appendChild(node);
+
+    // Range element mask
+    range = document.createElement('input');
+    range.dataset.index = this.getNumFilters();
+    range.type='range';
+    range.title = 'Mask';
+    range.classList.add('mask')
+    range.addEventListener('change', function() {
+        _this.changeFilter(this.dataset.index, 'mask', Number(this.value));
+        _this.applyFilters();
+    });
+    div.appendChild(range);
+
+
+    var check = document.createElement('input');
+    check.dataset.index = this.getNumFilters();
+    check.type='checkbox';
+    check.title = 'Invert mask';
+    check.classList.add('invert')
+    check.addEventListener('change', function() {
+        _this.changeFilter(this.dataset.index, 'invert', this.checked);
+        _this.applyFilters();
+    });
+    div.appendChild(check);
+
+
+    var node = document.createTextNode('Invert');
+    div.appendChild(node);
+
     this.filtersContainer.appendChild(div);
 }
 
@@ -140,9 +172,12 @@ ImageTools.prototype.renderHtml = function () {
         var filterElement = filterElements[i];
         var select = filterElement.querySelector('select');
         select.value = this.filters[i].name;
-        var range = filterElement.querySelector('input');
+        var range = filterElement.querySelector('input.param1');
         range.value = this.filters[i].param1;
-
+        range = filterElement.querySelector('input.mask');
+        range.value = this.filters[i].mask;
+        var check = filterElement.querySelector('input.invert');
+        check.checked = this.filters[i].invert;
     }
 };
 
@@ -151,49 +186,76 @@ ImageTools.prototype.applyFilters = function () {
     Filters.mt.init_genrand(0);
 
     this.ctx.clearRect(0,0,this.canvas.width, this.canvas.height);
-    var pixels = this.ctx.createImageData(this.width, this.height);//this.basePixels;//
+    var pixels = this.ctx.createImageData(this.width, this.height);
     Filters.copyBuffer(this.basePixels, pixels, this.width, this.height);
 
-    // var pixels = this.ctx.getImageData(0,0,this.width,this.height);
-
-    for (var f = 0; f < this.filters.length; f++) {
-        var filter = this.filters[f].name;
-        var param1 = this.filters[f].param1;
-        pixels = Filters.filterImage(Filters[filter], pixels, param1);
+    if (!this.disabled) {
+        for (var f = 0; f < this.filters.length; f++) {
+            var filter = this.filters[f].name;
+            var param1 = this.filters[f].param1;
+            var mask = this.filters[f].mask;
+            var invert = this.filters[f].invert;
+            var m = Filters.remap(mask, 0, 100, 0, 1);
+            pixels = Filters[filter](pixels, param1, 1-m, invert);
+        }
     }
     this.ctx.putImageData(pixels, 0,0);
 }
 
 ImageTools.operations = ['grayscale','brightness','noise','threshold','sharpen','blur','sobel', 'red', 'green', 'blue', 'temperature', 'contrast'];
 
+ImageTools.defaultFilter = {
+    name: ImageTools.operations[0],
+    param1: 50,
+    mask: 0,
+    invert: false
+};
+
 ImageTools.presets = {
     happy: [
-        { name: 'brightness', param1: 75 },
-        { name: 'temperature', param1: 75 },
-        { name: 'sharpen', param1: 75 },
+        { name: 'brightness', param1: 75, mask: 0, invert: false },
+        { name: 'temperature', param1: 75, mask: 0, invert: false },
+        { name: 'sharpen', param1: 75, mask: 0, invert: false },
     ],
     sad: [
-        { name: 'contrast', param1: 30 },
-        { name: 'brightness', param1: 30 },
-        { name: 'temperature', param1: 15 },
-        { name: 'green', param1: 30 },
+        { name: 'contrast', param1: 25, mask: 0, invert: false },
+        { name: 'brightness', param1: 30, mask: 0, invert: false },
+        { name: 'temperature', param1: 15, mask: 0, invert: false },
+        { name: 'green', param1: 30, mask: 0, invert: false },
     ],
     cozy: [
-        { name: 'brightness', param1: 50 },
-        { name: 'temperature', param1: 75 },
-        { name: 'blur', param1: 50 },
-        { name: 'brightness', param1: 50 },
+        { name: 'brightness', param1: 50, mask: 0, invert: false },
+        { name: 'temperature', param1: 75, mask: 0, invert: false },
+        { name: 'blur', param1: 100, mask: 100, invert: true },
+        { name: 'brightness', param1: 50, mask: 0, invert: false },
     ],
     night: [
-        { name: 'brightness', param1: 0 },
-        { name: 'temperature', param1: 0 },
-        { name: 'red', param1: 0 },
-        { name: 'green', param1: 0 },
-        { name: 'noise', param1: 40 },
+        { name: 'brightness', param1: 5, mask: 20, invert: false },
+        { name: 'brightness', param1: 10, mask: 100, invert: false },
+        { name: 'temperature', param1: 0, mask: 0, invert: false },
+        { name: 'red', param1: 0, mask: 0, invert: false },
+        { name: 'green', param1: 0, mask: 0, invert: false },
+        { name: 'noise', param1: 30, mask: 0, invert: false },
     ],
+    smog: [
+        { name: 'red', param1: 100, mask: 100, invert: false },
+        { name: 'red', param1: 100, mask: 100, invert: false },
+        { name: 'blur', param1: 50, mask: 100, invert: false },
+        { name: 'grayscale', param1: 30, mask: 100, invert: false },
+    ],
+    bold: [
+        { name: 'brightness', param1: 50, mask: 100, invert: false },
+        { name: 'contrast', param1: 60, mask: 30, invert: false },
+        { name: 'blue', param1: 100, mask: 100, invert: false },
+        { name: 'noise', param1: 30, mask: 100, invert: true },
+    ]
 };
 
 ImageTools.prototype.applyPreset = function (name) {
     this.filters = [].concat(ImageTools.presets[name]);
     this.renderHtml();
 };
+
+ImageTools.prototype.toggleAll = function (value) {
+    this.disabled = value;
+}
