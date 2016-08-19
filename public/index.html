@@ -42,23 +42,20 @@
     <script>
     'use strict';
 
-    function makeApp(isProd) {
-        var FLUX_CLIENT_ID = '780e094b-ce3b-4f7a-b807-00c61d30633f';//local
-        if (isProd) {
-            FLUX_CLIENT_ID = '92a4c7db-d562-4421-954b-effb2cfe1fd7'; // Prod
-        }
+    function makeApp() {
+        var FLUX_CLIENT_ID = '6986a83b-ee73-48fd-9a53-b681d25e2c90'; // Prod flux-image-tools
         var projectMenu = document.querySelector('#projectMenu');
 
         var REDIRECT_URI = window.location.origin;
         while(projectMenu.children.length > 0) {
             projectMenu.removeChild(projectMenu.children[0]);
         }
-        var fluxApp = new FluxApp(FLUX_CLIENT_ID, REDIRECT_URI, projectMenu, isProd);
+        var fluxApp = new FluxApp(FLUX_CLIENT_ID, REDIRECT_URI, projectMenu, true);
         return fluxApp;
     }
 
     function handleLoad() {
-        var fluxApp = makeApp(true); // true means connect to prod not dev
+        var fluxApp = makeApp(); // true means connect to prod not dev
         document.querySelector('#contentDiv').removeAttribute('hidden');
 
         document.querySelector('#loginButton').addEventListener('click', function(){
