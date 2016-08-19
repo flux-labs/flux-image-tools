@@ -117,6 +117,107 @@ Filters.threshold = function(pixels, param1) {
   return pixels;
 };
 
+// http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
+Filters.mAdobe = [0.5767309,  0.1855540,  0.1881852,
+          0.2973769,  0.6273491,  0.0752741,
+          0.0270343,  0.0706872,  0.9911085];
+
+Filters.mAdobeInv = [2.0413690, -0.5649464, -0.3446944,
+            -0.9692660,  1.8760108,  0.0415560,
+             0.0134474, -0.1183897,  1.0154096];
+
+Filters.mBeta = [
+0.6712537,  0.1745834,  0.1183829,
+0.3032726,  0.6637861,  0.0329413,
+0.0000000,  0.0407010,  0.7845090
+];
+
+Filters.mBetaInv = [
+ 1.6832270, -0.4282363, -0.2360185,
+-0.7710229,  1.7065571,  0.0446900,
+ 0.0400013, -0.0885376,  1.2723640
+];
+
+Filters.rgbToXyz = function(data) {
+  return Filters.transform(data, Filters.mBeta);
+}
+
+Filters.xyzToRgb = function(data) {
+  return Filters.transform(data, Filters.mBetaInv);
+}
+
+Filters.transform = function(data, m) {
+  var x = data[0] * m[0] + data[1] * m[1] + data[2] * m[2];
+  var y = data[0] * m[3] + data[1] * m[4] + data[2] * m[5];
+  var z = data[0] * m[6] + data[1] * m[7] + data[2] * m[8];
+  return [x,y,z];
+};
+
+
+Filters.red = function(pixels, param1) {
+  var t = Filters.remap(param1, 0, 100, -30, 30);
+  var d = pixels.data;
+  for (var i=0; i<d.length; i+=4) {
+    d[i] += t;
+  }
+  return pixels;
+};
+
+Filters.green = function(pixels, param1) {
+  var t = Filters.remap(param1, 0, 100, -30, 30);
+  var d = pixels.data;
+  for (var i=0; i<d.length; i+=4) {
+    d[i+1] += t;
+  }
+  return pixels;
+};
+
+Filters.blue = function(pixels, param1) {
+  var t = Filters.remap(param1, 0, 100, -30, 30);
+  var d = pixels.data;
+  for (var i=0; i<d.length; i+=4) {
+    d[i+2] += t;
+  }
+  return pixels;
+};
+
+Filters.temperature = function(pixels, param1) {
+  var t = Filters.remap(param1, 0, 100, -15, 15);
+  var d = pixels.data;
+  for (var i=0; i<d.length; i+=4) {
+    var r = d[i];
+    var g = d[i+1];
+    var b = d[i+2];
+    var xyz = Filters.rgbToXyz([r,g,b]);
+    xyz[0] += t; // green pink
+    // xyz[1] += t; // pink green
+     xyz[2] -= t; // yellow blue
+    var rgb = Filters.xyzToRgb(xyz);
+    d[i] = rgb[0];
+    d[i+1] = rgb[1];
+    d[i+2] = rgb[2];
+  }
+  return pixels;
+};
+
+Filters.range = 255;
+
+Filters.contrast = function(pixels, param1) {
+  var t = Filters.remap(param1, 0, 100, 0, 2);
+  var d = pixels.data;
+  for (var i=0; i<d.length; i+=4) {
+    var r = d[i];
+    var g = d[i+1];
+    var b = d[i+2];
+    r = ((((r / Filters.range)-0.5)*t)+0.5)*Filters.range;
+    g = ((((g / Filters.range)-0.5)*t)+0.5)*Filters.range;
+    b = ((((b / Filters.range)-0.5)*t)+0.5)*Filters.range;
+    d[i] = r;
+    d[i+1] = g;
+    d[i+2] = b;
+  }
+  return pixels;
+};
 
 Filters.convolute = function(pixels, weights, param1) {
   var t = Filters.remap(param1, 0, 100, 0, 1);

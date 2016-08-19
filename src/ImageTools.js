@@ -22,6 +22,7 @@ function ImageTools (canvas, width, height, filtersContainer){
     this.basePixels = null;
 }
 
+
 ImageTools.prototype.getWidth = function () {
     return this.width;
 };
@@ -57,22 +58,29 @@ ImageTools.prototype.addFilter = function () {
         param1: 50
     });
     this.renderHtml();
-}
+};
+
+ImageTools.prototype.clearFilters = function () {
+    while (this.filters.length > 0) {
+        this.filters.pop();
+    }
+    this.renderHtml();
+};
 
 ImageTools.prototype.deleteFilter = function () {
     if (!this.filtersContainer) return;
     this.filters.pop();
     this.renderHtml();
-}
+};
 
 ImageTools.prototype.changeFilter = function (i, param, value) {;
     this.filters[i][param] = value;
     this.renderHtml();
-}
+};
 
 ImageTools.prototype.getNumFilters = function () {
     return this.filtersContainer.querySelectorAll('.filter').length;
-}
+};
 
 ImageTools.prototype.addFilterHtml = function () {
     var ops = ImageTools.operations;
@@ -127,6 +135,15 @@ ImageTools.prototype.renderHtml = function () {
             }
         }
     }
+    var filterElements = this.filtersContainer.querySelectorAll('.filter');
+    for (var i=0;i<filterElements.length;i++) {
+        var filterElement = filterElements[i];
+        var select = filterElement.querySelector('select');
+        select.value = this.filters[i].name;
+        var range = filterElement.querySelector('input');
+        range.value = this.filters[i].param1;
+
+    }
 };
 
 ImageTools.prototype.applyFilters = function () {
@@ -147,5 +164,36 @@ ImageTools.prototype.applyFilters = function () {
     this.ctx.putImageData(pixels, 0,0);
 }
 
-ImageTools.operations = ['grayscale','brightness','noise','threshold','sharpen','blur','sobel'];
+ImageTools.operations = ['grayscale','brightness','noise','threshold','sharpen','blur','sobel', 'red', 'green', 'blue', 'temperature', 'contrast'];
 
+ImageTools.presets = {
+    happy: [
+        { name: 'brightness', param1: 75 },
+        { name: 'temperature', param1: 75 },
+        { name: 'sharpen', param1: 75 },
+    ],
+    sad: [
+        { name: 'contrast', param1: 30 },
+        { name: 'brightness', param1: 30 },
+        { name: 'temperature', param1: 15 },
+        { name: 'green', param1: 30 },
+    ],
+    cozy: [
+        { name: 'brightness', param1: 50 },
+        { name: 'temperature', param1: 75 },
+        { name: 'blur', param1: 50 },
+        { name: 'brightness', param1: 50 },
+    ],
+    night: [
+        { name: 'brightness', param1: 0 },
+        { name: 'temperature', param1: 0 },
+        { name: 'red', param1: 0 },
+        { name: 'green', param1: 0 },
+        { name: 'noise', param1: 40 },
+    ],
+};
+
+ImageTools.prototype.applyPreset = function (name) {
+    this.filters = [].concat(ImageTools.presets[name]);
+    this.renderHtml();
+};

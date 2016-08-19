@@ -14,13 +14,27 @@ function FluxApp (clientKey, redirectUri, projectMenu, isProd){
     this._fluxDataSelector.init();
     var filters = document.querySelector('#filters');
     this.tools = new ImageTools(document.querySelector('#imageCanvas'), 512, 512, filters);
+    this.addPresets();
     this.loadDefault();
 }
 
 FluxApp.keyDescription = 'Image blob';
 
+FluxApp.prototype.addPresets = function () {
+    var menu = document.querySelector('#presetsMenu');
+    var keys = Object.keys(ImageTools.presets);
+    for (var i=0;i<keys.length;i++) {
+        var key = keys[i];
+        var option = document.createElement('option');
+        option.value = key;
+        option.textContent = key
+        menu.appendChild(option);
+    }
+};
+
 FluxApp.prototype.loadDefault = function () {
     var _this = this;
+    this.fileName = 'city';
     fetch('data/city.jpg').then(function(response) {
         return response.blob();
     }).then(function(blob) {
@@ -166,5 +180,14 @@ FluxApp.prototype.addFilter = function (container) {
 
 FluxApp.prototype.deleteFilter = function (container) {
     this.tools.deleteFilter();
+    this.tools.applyFilters();
+};
+
+FluxApp.prototype.presetChanged = function (value) {
+    if (value === 'default') {
+        this.tools.clearFilters();
+    } else {
+        this.tools.applyPreset(value);
+    }
     this.tools.applyFilters();
 };

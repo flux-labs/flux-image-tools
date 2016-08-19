@@ -26,11 +26,15 @@
             <button id="addButton">Add filter</button>
             <button id="deleteButton">Delete filter</button>
             <button id="filterButton">Apply Filters</button>
+            Presets:
+            <select id="presetsMenu">
+                <option value="default">default</option>
+            </select>
         </div>
         <br>
         <div id="tail">
         <button id="fluxButton" disabled>Send to Flux</button>
-        <button id="downloadButton" disabled>Download</button>
+        <button id="downloadButton">Download</button>
         </div>
     </div>
     <script>
@@ -68,12 +72,14 @@
 
         document.querySelector('#keyButton').addEventListener('click', function(){
             fluxApp.selectKey();
-            document.querySelector('#downloadButton').removeAttribute('disabled');
         });
 
         document.querySelector('#imageSelector').addEventListener('change', function(){
             fluxApp.fileChanged(imageSelector);
-            document.querySelector('#downloadButton').removeAttribute('disabled');
+        });
+
+        document.querySelector('#presetsMenu').addEventListener('change', function(){
+            fluxApp.presetChanged(presetsMenu.value);
         });
 
         document.querySelector('#downloadButton').addEventListener('click', function(){
